@@ -1,7 +1,7 @@
 {
-  "name": "bike-safety-dashboard-(ble)",
+  "name": "bike-safety-dashboard",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,17 +9,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.563.0",
-    "@react-three/fiber": "^9.5.0",
-    "three": "^0.182.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "@react-three/drei": "^10.7.7"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.170.0",
+    "@react-three/fiber": "^9.0.0",
+    "@react-three/drei": "^10.0.0",
+    "lucide-react": "^0.463.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.170.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
   }
 }
