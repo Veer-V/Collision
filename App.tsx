@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Navigation, AlertTriangle, Bluetooth, Wifi, MapPin, Activity, Zap, Radio, Cpu, Usb, ExternalLink, Play, Square, Info, Terminal, Search } from 'lucide-react';
+import { Shield, Navigation, AlertTriangle, Bluetooth, Wifi, MapPin, Activity, Zap, Radio, Cpu, Usb, ExternalLink, Play, Square, Info, Terminal, Search, Camera, Waves } from 'lucide-react';
 import BikeScene from './components/BikeScene';
 import { BikeState, SensorData, GpsData } from './types';
 
@@ -43,7 +43,6 @@ const App: React.FC = () => {
     if (!cleanLine) return;
 
     // --- FUZZY SENSOR PARSING ---
-    // Matches: "ID 1: 100", "Sensor 1: 50.2", "S1: 120cm", "ID 1: Distance = 150.00 cm"
     const sensorMatch = cleanLine.match(/(?:ID|Sensor|S)\s*(\d+)[:\s=]+([\d.]+)/i);
     if (sensorMatch) {
       const id = parseInt(sensorMatch[1]);
@@ -68,18 +67,15 @@ const App: React.FC = () => {
     }
 
     // --- FUZZY GPS PARSING ---
-    // Matches: "Lat: 34.05 Lng: -118.24", "Latitude: 34 Longitude: -118", "GPS: 34.1, -118.2"
     const latMatch = cleanLine.match(/(?:Lat|Latitude|GPS)[:\s=]+([\d.-]+)/i);
     const lngMatch = cleanLine.match(/(?:Lng|Longitude|Lon)[:\s=]+([\d.-]+)/i);
-    
-    // Also check for comma separated GPS: "34.0522, -118.2437"
     const commaGpsMatch = cleanLine.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
 
     let lat = 0, lng = 0, found = false;
 
     if (latMatch && lngMatch) {
       lat = parseFloat(latMatch[1]);
-      lng = parseFloat(lngMatch[1]);
+      lng = parseFloat(lngMatch[1]); // Ensure correct index
       found = true;
     } else if (commaGpsMatch) {
       lat = parseFloat(commaGpsMatch[1]);
@@ -127,7 +123,7 @@ const App: React.FC = () => {
       if (!('serial' in navigator)) throw new Error("Web Serial not supported.");
       
       const port = await (navigator as any).serial.requestPort();
-      await port.open({ baudRate: 115200 }); // CRITICAL: ESP32 must match this
+      await port.open({ baudRate: 115200 });
       serialPortRef.current = port;
       setBikeState(prev => ({ ...prev, isConnected: true }));
       addLog("SERIAL_LINK_ESTABLISHED: COM7");
@@ -233,7 +229,7 @@ const App: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl font-orbitron font-bold tracking-[0.3em] text-white/90 uppercase leading-none">
-              BIKE<span className="text-blue-500">SAFE</span> v3.3
+              BIKE<span className="text-blue-500">SAFE</span> v3.4
             </h1>
             <div className="flex items-center gap-2 mt-1.5">
                <div className={`w-1.5 h-1.5 rounded-full ${bikeState.isConnected ? 'bg-green-500 animate-pulse shadow-[0_0_8px_green]' : 'bg-red-500'}`} />
@@ -293,41 +289,59 @@ const App: React.FC = () => {
           <section>
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-[12px] font-orbitron text-blue-400 uppercase tracking-[0.4em] flex items-center gap-3">
-                <Activity className="w-4 h-4" /> Proximity
+                <Camera className="w-4 h-4" /> Vision HUD
               </h2>
-              <div className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[8px] text-blue-400 font-bold uppercase">Active</div>
+              <div className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[8px] text-blue-400 font-bold uppercase">System Active</div>
             </div>
             
             <div className="space-y-5">
               {[
-                { id: 1, label: 'Port Lateral', danger: bikeState.leftDanger },
-                { id: 2, label: 'Starboard Lateral', danger: bikeState.rightDanger },
-                { id: 3, label: 'Aft Sensor', danger: bikeState.backDanger },
+                { id: 1, label: 'Left Camera', danger: bikeState.leftDanger },
+                { id: 2, label: 'Right Camera', danger: bikeState.rightDanger },
+                { id: 3, label: 'Back Camera', danger: bikeState.backDanger },
               ].map(sensor => {
                 const data = bikeState.sensors[sensor.id as keyof typeof bikeState.sensors];
                 const age = Date.now() - data.lastUpdate;
                 const isFresh = age < 2000;
 
                 return (
-                  <div key={sensor.id} className={`group relative p-6 rounded-[2rem] border transition-all duration-700 ${
+                  <div key={sensor.id} className={`group relative p-6 rounded-[2rem] border transition-all duration-700 overflow-hidden ${
                     sensor.danger 
                     ? 'bg-red-500/20 border-red-500/60 shadow-[0_0_50px_rgba(239,68,68,0.2)]' 
                     : 'bg-white/[0.03] border-white/10'
                   }`}>
-                    <div className="flex justify-between items-start mb-4">
+                    {/* Camera Scanline Overlay */}
+                    <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
+                    
+                    <div className="flex justify-between items-start mb-4 relative z-10">
                       <div className="flex flex-col">
-                        <span className="text-[10px] text-white/30 uppercase font-bold tracking-widest">{sensor.label}</span>
-                        <span className={`text-[8px] uppercase mt-1 ${isFresh ? 'text-green-500/50' : 'text-white/10'}`}>
-                          {isFresh ? 'Signal: Strong' : 'Signal: Stale'}
+                        <div className="flex items-center gap-2">
+                           <span className="text-[10px] text-white font-bold tracking-widest uppercase">{sensor.label}</span>
+                           {isFresh && <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" title="Recording" />}
+                        </div>
+                        <span className={`text-[8px] uppercase mt-1 flex items-center gap-1 ${isFresh ? 'text-green-500/50' : 'text-white/10'}`}>
+                          <Waves className="w-2.5 h-2.5" />
+                          Ultrasonic Stream: {isFresh ? 'Active' : 'Offline'}
                         </span>
                       </div>
                       <div className={`w-3 h-3 rounded-full border-2 border-black ${sensor.danger ? 'bg-red-500 shadow-[0_0_15px_red] animate-pulse' : (isFresh ? 'bg-blue-500' : 'bg-white/10')}`} />
                     </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className={`text-4xl font-orbitron font-bold tabular-nums ${sensor.danger ? 'text-red-400' : 'text-white'}`}>
-                        {data.distance.toFixed(0)}
-                      </span>
-                      <span className="text-sm text-white/20 font-orbitron font-bold">CM</span>
+                    
+                    <div className="flex flex-col relative z-10">
+                      <div className="flex items-baseline gap-2">
+                        <span className={`text-4xl font-orbitron font-bold tabular-nums ${sensor.danger ? 'text-red-400' : 'text-white'}`}>
+                          {data.distance.toFixed(0)}
+                        </span>
+                        <span className="text-sm text-white/20 font-orbitron font-bold">CM</span>
+                      </div>
+                      <div className="text-[9px] font-orbitron text-white/20 uppercase tracking-widest mt-1">Obstacle Proximity</div>
+                    </div>
+
+                    <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-700 ${sensor.danger ? 'bg-red-500' : 'bg-blue-600'}`}
+                          style={{ width: `${Math.max(5, Math.min(100, (1 - data.distance / 400) * 100))}%` }}
+                        />
                     </div>
                   </div>
                 );
@@ -337,7 +351,7 @@ const App: React.FC = () => {
 
           <section className="mt-auto relative">
              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[10px] font-orbitron text-white/20 uppercase tracking-[0.3em]">Neural Logs</h2>
+                <h2 className="text-[10px] font-orbitron text-white/20 uppercase tracking-[0.3em]">Neural Diagnostics</h2>
                 <div className="flex gap-2">
                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
                 </div>
@@ -346,7 +360,7 @@ const App: React.FC = () => {
               {logs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4 text-white/10 italic">
                   <Search className="w-8 h-8 opacity-20" />
-                  Listening for ESP32...
+                  Scanning COM7 Interface...
                 </div>
               ) : logs.map((log, i) => (
                 <div key={i} className="mb-2 pb-2 border-b border-white/[0.02] flex gap-3">
@@ -373,14 +387,14 @@ const App: React.FC = () => {
                     <AlertTriangle className="w-12 h-12" /> 
                     <span className="text-3xl">EVASIVE ACTION REQUIRED</span>
                   </div>
-                  <div className="px-6 py-2 bg-black/60 rounded-full border border-red-500/20 text-red-500/60 text-[10px] font-orbitron uppercase tracking-widest">Collision Risk High</div>
+                  <div className="px-6 py-2 bg-black/60 rounded-full border border-red-500/20 text-red-500/60 text-[10px] font-orbitron uppercase tracking-widest">System Safety Intervention</div>
                 </div>
               )}
            </div>
 
            {/* Raw Data HUD */}
            {showRawMonitor && (
-             <div className="absolute right-8 top-8 w-80 bg-black/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] p-6 z-[60] shadow-2xl animate-in slide-in-from-top-4 duration-500">
+             <div className="absolute right-8 top-8 w-80 bg-black/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] p-6 z-[60] shadow-2xl animate-in slide-in-from-top-4 duration-500">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <Terminal className="w-4 h-4 text-blue-500" />
@@ -402,9 +416,6 @@ const App: React.FC = () => {
                       </div>
                    </div>
                 </div>
-                <div className="mt-6 text-[9px] text-white/20 italic text-center">
-                  Verify ESP32 Serial.println() format
-                </div>
              </div>
            )}
         </div>
@@ -413,7 +424,7 @@ const App: React.FC = () => {
         <div className="w-[22rem] border-l border-white/5 p-8 flex flex-col gap-10 z-10 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-3xl">
           <section>
             <h2 className="text-[12px] font-orbitron text-blue-400 uppercase tracking-[0.4em] flex items-center gap-3 mb-8">
-              <Navigation className="w-4 h-4" /> Navigation
+              <Navigation className="w-4 h-4" /> Positioning
             </h2>
 
             <div className="p-7 rounded-[2.5rem] bg-white/[0.03] border border-white/10 space-y-8 shadow-inner">
@@ -450,7 +461,7 @@ const App: React.FC = () => {
                 {!bikeState.gps.valid && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm gap-4 p-6 text-center">
                      <div className="w-8 h-8 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
-                     <span className="text-[10px] text-white/40 font-orbitron tracking-[0.2em] uppercase leading-relaxed">External Skyview Needed for GNSS Locking</span>
+                     <span className="text-[10px] text-white/40 font-orbitron tracking-[0.2em] uppercase leading-relaxed">Outdoor GNSS Unlock Required</span>
                   </div>
                 )}
               </div>
@@ -462,7 +473,7 @@ const App: React.FC = () => {
                <Zap className="text-blue-400 w-8 h-8" />
             </div>
             <div>
-              <div className="text-[12px] text-blue-400 uppercase font-bold tracking-[0.3em] mb-1">Cortex Link</div>
+              <div className="text-[12px] text-blue-400 uppercase font-bold tracking-[0.3em] mb-1">Cortex Master</div>
               <div className="text-sm font-semibold text-white/80">Integrity: Optimal</div>
             </div>
           </section>
@@ -476,11 +487,11 @@ const App: React.FC = () => {
             <div className={`w-2.5 h-2.5 rounded-full ${bikeState.isConnected ? 'bg-green-500 shadow-[0_0_15px_green] animate-pulse' : 'bg-white/5'}`} />
             <span>LINK_{bikeState.isConnected ? 'CONNECTED' : 'DISCONNECTED'}</span>
           </div>
-          <span className="hidden md:inline">NODE: {isSimulating ? 'VIRTUAL_CORE' : 'MASTER_ESP32_P7'}</span>
-          <span className="hidden md:inline">BAUD: 115200</span>
+          <span className="hidden md:inline">HARDWARE: ESP32_GEN3</span>
+          <span className="hidden md:inline">BUS: COM7@115200</span>
         </div>
         <div className="flex items-center gap-6">
-          <span className="text-blue-500/40 font-bold uppercase">Tesla BikeOS v3.3</span>
+          <span className="text-blue-500/40 font-bold uppercase">BikeOS v3.4</span>
           <div className="w-10 h-2 bg-blue-500/10 rounded-full overflow-hidden border border-white/5">
              <div className={`h-full bg-blue-500 transition-all duration-1000 ${bikeState.isConnected ? 'w-full shadow-[0_0_10px_blue]' : 'w-0'}`} />
           </div>
