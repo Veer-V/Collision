@@ -5,6 +5,21 @@ import { PerspectiveCamera, Stars, Environment, Float, Text, RoundedBox, Contact
 import * as THREE from 'three';
 import { BikeState } from '../types';
 
+// Define local capitalized aliases for Three.js intrinsic elements.
+// This avoids augmenting the global JSX.IntrinsicElements namespace, which was
+// causing standard HTML elements (like div, span, h1, header) to be missing from
+// the JSX type definitions in the entire project.
+const Group = 'group' as any;
+const Mesh = 'mesh' as any;
+const PlaneGeometry = 'planeGeometry' as any;
+const MeshStandardMaterial = 'meshStandardMaterial' as any;
+const GridHelper = 'gridHelper' as any;
+const BoxGeometry = 'boxGeometry' as any;
+const PointLight = 'pointLight' as any;
+const SphereGeometry = 'sphereGeometry' as any;
+const AmbientLight = 'ambientLight' as any;
+const SpotLight = 'spotLight' as any;
+
 interface SceneProps {
   state: BikeState;
 }
@@ -19,13 +34,14 @@ const Road = () => {
   });
 
   return (
-    <group>
-      <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
-        <planeGeometry args={[30, 150]} />
-        <meshStandardMaterial color="#050505" metalness={0.8} roughness={0.2} />
-        <gridHelper args={[30, 20, 0x222222, 0x111111]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.01]} />
-      </mesh>
-    </group>
+    // Fixed: Using local Group and Mesh components to avoid JSX intrinsic element errors
+    <Group>
+      <Mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
+        <PlaneGeometry args={[30, 150]} />
+        <MeshStandardMaterial color="#050505" metalness={0.8} roughness={0.2} />
+        <GridHelper args={[30, 20, 0x222222, 0x111111]} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.01]} />
+      </Mesh>
+    </Group>
   );
 };
 
@@ -40,50 +56,51 @@ const BikeModel = ({ state }: { state: BikeState }) => {
   });
 
   return (
-    <group ref={group}>
+    // Fixed: Using local Group component
+    <Group ref={group}>
       {/* Main Chassis */}
       <RoundedBox args={[0.5, 0.9, 2.6]} radius={0.08} smoothness={4}>
-        <meshStandardMaterial color="#0a0a0a" metalness={1} roughness={0.1} />
+        <MeshStandardMaterial color="#0a0a0a" metalness={1} roughness={0.1} />
       </RoundedBox>
       
       {/* Visual Accents */}
-      <mesh position={[0, 0.5, 0.2]}>
-        <boxGeometry args={[0.55, 0.1, 1.8]} />
-        <meshStandardMaterial color="#2563eb" emissive="#2563eb" emissiveIntensity={0.2} />
-      </mesh>
+      <Mesh position={[0, 0.5, 0.2]}>
+        <BoxGeometry args={[0.55, 0.1, 1.8]} />
+        <MeshStandardMaterial color="#2563eb" emissive="#2563eb" emissiveIntensity={0.2} />
+      </Mesh>
 
       {/* Rear Light HUD */}
-      <mesh position={[0, 0.4, -1.35]}>
-        <boxGeometry args={[0.4, 0.15, 0.05]} />
-        <meshStandardMaterial 
+      <Mesh position={[0, 0.4, -1.35]}>
+        <BoxGeometry args={[0.4, 0.15, 0.05]} />
+        <MeshStandardMaterial 
             color={state.backDanger ? "#ff0000" : "#200000"} 
             emissive={state.backDanger ? "#ff0000" : "#100000"}
             emissiveIntensity={state.backDanger ? 20 : 0.2}
         />
-      </mesh>
+      </Mesh>
 
       {/* Side Signal HUDs */}
-      <mesh position={[-0.35, 0.5, 0.6]}>
-        <boxGeometry args={[0.02, 0.1, 0.4]} />
-        <meshStandardMaterial 
+      <Mesh position={[-0.35, 0.5, 0.6]}>
+        <BoxGeometry args={[0.02, 0.1, 0.4]} />
+        <MeshStandardMaterial 
             color={state.leftDanger ? "#f97316" : "#222"} 
             emissive={state.leftDanger ? "#f97316" : "#000"}
             emissiveIntensity={state.leftDanger ? 10 : 0}
         />
-      </mesh>
+      </Mesh>
 
-      <mesh position={[0.35, 0.5, 0.6]}>
-        <boxGeometry args={[0.02, 0.1, 0.4]} />
-        <meshStandardMaterial 
+      <Mesh position={[0.35, 0.5, 0.6]}>
+        <BoxGeometry args={[0.02, 0.1, 0.4]} />
+        <MeshStandardMaterial 
             color={state.rightDanger ? "#f97316" : "#222"} 
             emissive={state.rightDanger ? "#f97316" : "#000"}
             emissiveIntensity={state.rightDanger ? 10 : 0}
         />
-      </mesh>
+      </Mesh>
 
       {/* Underglow */}
-      <pointLight position={[0, -0.6, 0]} intensity={2} color="#3b82f6" distance={5} />
-    </group>
+      <PointLight position={[0, -0.6, 0]} intensity={2} color="#3b82f6" distance={5} />
+    </Group>
   );
 };
 
@@ -110,9 +127,9 @@ const DangerField = ({ id, distance, isActive }: { id: number, distance: number,
   });
 
   return (
-    <group>
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[1, 32, 32]} />
+    <Group>
+      <Mesh ref={meshRef}>
+        <SphereGeometry args={[1, 32, 32]} />
         <MeshDistortMaterial 
           color="#ff0000" 
           speed={5} 
@@ -122,9 +139,9 @@ const DangerField = ({ id, distance, isActive }: { id: number, distance: number,
           emissive="#ff0000" 
           emissiveIntensity={5} 
         />
-      </mesh>
-      <pointLight ref={lightRef} position={position} color="#ff0000" distance={8} />
-    </group>
+      </Mesh>
+      <PointLight ref={lightRef} position={position} color="#ff0000" distance={8} />
+    </Group>
   );
 };
 
@@ -137,8 +154,8 @@ const BikeScene: React.FC<SceneProps> = ({ state }) => {
         <Stars radius={100} depth={50} count={6000} factor={4} saturation={0} fade speed={1.5} />
         <Environment preset="night" />
         
-        <ambientLight intensity={0.1} />
-        <spotLight position={[10, 20, 10]} angle={0.2} penumbra={1} intensity={2} castShadow color="#3b82f6" />
+        <AmbientLight intensity={0.1} />
+        <SpotLight position={[10, 20, 10]} angle={0.2} penumbra={1} intensity={2} castShadow color="#3b82f6" />
         
         <Road />
         <BikeModel state={state} />
