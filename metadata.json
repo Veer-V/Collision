@@ -1,0 +1,8 @@
+{
+  "name": "Tesla-Style Bike Safety Dashboard (BLE)",
+  "description": "A wireless 3D dashboard for bike safety, connecting via Web Bluetooth to ESP32 Master Node for real-time obstacle and GPS telemetry.",
+  "requestFramePermissions": [
+    "geolocation",
+    "bluetooth"
+  ]
+}
